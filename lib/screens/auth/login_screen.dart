@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   @override
@@ -25,3 +26,12 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
+TextButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RegisterScreen()),
+    );
+  },
+  child: Text("Don't have an account? Register"),
+)
