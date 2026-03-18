@@ -20,18 +20,20 @@ class LoginScreen extends StatelessWidget {
               onPressed: () {},
               child: Text("Login"),
             ),
+            SizedBox(height: 10),
+            // Move the TextButton inside the Column's children list
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => RegisterScreen()),
+                );
+              },
+              child: Text("Don't have an account? Register"),
+            ),
           ],
         ),
       ),
     );
   }
 }
-TextButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => RegisterScreen()),
-    );
-  },
-  child: Text("Don't have an account? Register"),
-)
