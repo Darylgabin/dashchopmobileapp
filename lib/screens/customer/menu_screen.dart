@@ -1,87 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import '../../models/dummy_data.dart';
+import '../../widgets/food_card.dart';
 
-class HomeScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> restaurants = [
-    {
-      "name": "Pizza Palace",
-      "description": "Best pizzas in town",
-      "image": "https://via.placeholder.com/150"
-    },
-    {
-      "name": "Burger Hub",
-      "description": "Juicy burgers & fries",
-      "image": "https://via.placeholder.com/150"
-    },
-    {
-      "name": "African Delights",
-      "description": "Local traditional meals",
-      "image": "https://via.placeholder.com/150"
-    },
-  ];
+class MenuScreen extends StatelessWidget {
+  final Color primaryBrown = const Color(0xFF7D4427);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text("DashChop"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          "DashChop Menu",
+          style: TextStyle(color: primaryBrown, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
-      body: ListView.builder(
-        itemCount: restaurants.length,
-        itemBuilder: (context, index) {
-          final restaurant = restaurants[index];
-
-          return Card(
-            margin: EdgeInsets.all(10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            elevation: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(15),
+      body: Column(
+        children: [
+          // 🔍 Search Bar Section
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
-                  child: Image.network(
-                    restaurant["image"],
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                ],
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Search for cakes or pies...",
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(CupertinoIcons.search, color: primaryBrown),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        restaurant["name"],
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 5),
-                      Text(
-                        restaurant["description"],
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          // next step: open menu
-                        },
-                        child: Text("View Menu"),
-                      )
-                    ],
-                  ),
-                )
-              ],
+                onChanged: (value) {
+                  // Logic for filtering will go here later with Riverpod
+                },
+              ),
             ),
-          );
-        },
+          ),
+
+          // 🍽️ Piled Plates List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              physics: const BouncingScrollPhysics(),
+              itemCount: dummyMenu.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: FoodCard(food: dummyMenu[index]),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

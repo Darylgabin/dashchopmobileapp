@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-import '../customer/menu_screen.dart';
+import '../customer/main_customer_nav.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -44,9 +44,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   left: 20,
                   right: 20,
                 ),
-                color: const Color(0xFFFFA500),
+                color: const Color(0xFF7D4427),
                 child: Text(
-                  "DashChop Register",
+                  "Register",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: const Color(0xFFFFA500),
+                                    color: const Color(0xFF7D4427),
                                     width: 3,
                                   ),
                                   borderRadius: BorderRadius.circular(25),
@@ -109,12 +109,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       SizedBox(height: 30),
                                       // Full Name Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _nameController,
                                         style: TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your full name';
+                                          }
+                                          if (value.length < 3) {
+                                            return 'Name must be at least 3 characters';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Enter full name",
                                           hintStyle: TextStyle(
@@ -137,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       SizedBox(height: 16),
                                       // Email Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _emailController,
                                         keyboardType:
                                             TextInputType.emailAddress,
@@ -145,6 +154,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your email';
+                                          }
+                                          if (!value.contains('@')) {
+                                            return 'Please enter a valid email';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Enter your email",
                                           hintStyle: TextStyle(
@@ -167,13 +185,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       SizedBox(height: 16),
                                       // Password Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _passwordController,
                                         obscureText: !_showPassword,
                                         style: TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter a password';
+                                          }
+                                          if (value.length < 6) {
+                                            return 'Password must be at least 6 characters';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Enter password",
                                           hintStyle: TextStyle(
@@ -209,13 +236,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       SizedBox(height: 16),
                                       // Confirm Password Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _confirmPasswordController,
                                         obscureText: !_showConfirmPassword,
                                         style: TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please confirm your password';
+                                          }
+                                          if (value !=
+                                              _passwordController.text) {
+                                            return 'Passwords do not match';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Confirm password",
                                           hintStyle: TextStyle(
@@ -259,47 +296,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           onPressed: _isLoading
                                               ? null
                                               : () async {
-                                                  final name = _nameController
-                                                      .text
-                                                      .trim();
-                                                  final email = _emailController
-                                                      .text
-                                                      .trim();
-                                                  final password =
-                                                      _passwordController.text
-                                                          .trim();
-                                                  final confirmPassword =
-                                                      _confirmPasswordController
-                                                          .text
-                                                          .trim();
-
-                                                  if (name.isEmpty ||
-                                                      email.isEmpty ||
-                                                      password.isEmpty ||
-                                                      confirmPassword.isEmpty) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Please fill all fields',
-                                                        ),
-                                                      ),
-                                                    );
-                                                    return;
-                                                  }
-
-                                                  if (password !=
-                                                      confirmPassword) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Passwords do not match',
-                                                        ),
-                                                      ),
-                                                    );
+                                                  if (!_formKey.currentState!
+                                                      .validate()) {
                                                     return;
                                                   }
 
@@ -309,8 +307,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                                                   try {
                                                     // TODO: Implement signup with your authentication service
-                                                    throw Exception(
-                                                      'Signup not yet implemented',
+                                                    // For now, navigate to MainCustomerNav on success
+                                                    await Future.delayed(
+                                                      Duration(seconds: 1),
+                                                    );
+
+                                                    Navigator.pushReplacement(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            MainCustomerNav(),
+                                                      ),
                                                     );
                                                   } catch (e) {
                                                     setState(
@@ -330,7 +337,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                 },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
-                                              0xFFFFA500,
+                                              0xFF7D4427,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -391,7 +398,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: const Text(
                                   "Login",
                                   style: TextStyle(
-                                    color: Color(0xFFFFA500),
+                                    color: Color(0xFF7D4427),
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),

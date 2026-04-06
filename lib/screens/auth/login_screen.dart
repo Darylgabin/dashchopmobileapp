@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'signup_screen.dart';
+import '../customer/main_customer_nav.dart';
 import '../customer/menu_screen.dart';
-import '../restaurant/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -42,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   left: 20,
                   right: 20,
                 ),
-                color: const Color(0xFFFFA500),
+                color: const Color(0xFF7D4427),
                 child: Text(
                   "DashChop Login",
                   style: TextStyle(
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: const Color(0xFFFFA500),
+                                    color: const Color(0xFF7D4427),
                                     width: 3,
                                   ),
                                   borderRadius: BorderRadius.circular(25),
@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       SizedBox(height: 30),
                                       // Email Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _emailController,
                                         keyboardType:
                                             TextInputType.emailAddress,
@@ -115,6 +115,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your email';
+                                          }
+                                          if (!value.contains('@')) {
+                                            return 'Please enter a valid email';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Enter your email",
                                           hintStyle: TextStyle(
@@ -137,13 +146,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       SizedBox(height: 16),
                                       // Password Field
-                                      TextField(
+                                      TextFormField(
                                         controller: _passwordController,
                                         obscureText: !_showPassword,
                                         style: TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your password';
+                                          }
+                                          if (value.length < 6) {
+                                            return 'Password must be at least 6 characters';
+                                          }
+                                          return null;
+                                        },
                                         decoration: InputDecoration(
                                           hintText: "Enter password",
                                           hintStyle: TextStyle(
@@ -188,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             child: const Text(
                                               "Forgot Password?",
                                               style: TextStyle(
-                                                color: Color(0xFFFFA500),
+                                                color: Color(0xFF7D4427),
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -205,24 +223,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                           onPressed: _isLoading
                                               ? null
                                               : () async {
-                                                  final email = _emailController
-                                                      .text
-                                                      .trim();
-                                                  final password =
-                                                      _passwordController.text
-                                                          .trim();
-
-                                                  if (email.isEmpty ||
-                                                      password.isEmpty) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Please fill all fields',
-                                                        ),
-                                                      ),
-                                                    );
+                                                  if (!_formKey.currentState!
+                                                      .validate()) {
                                                     return;
                                                   }
 
@@ -232,8 +234,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                                   try {
                                                     // TODO: Implement login with your authentication service
-                                                    throw Exception(
-                                                      'Login not yet implemented',
+                                                    // For now, navigate to MainCustomerNav on success
+                                                    await Future.delayed(
+                                                      Duration(seconds: 1),
+                                                    );
+
+                                                    Navigator.pushReplacement(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            MainCustomerNav(),
+                                                      ),
                                                     );
                                                   } catch (e) {
                                                     setState(
@@ -253,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
-                                              0xFFFFA500,
+                                              0xFF7D4427,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -302,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           },
                                           style: OutlinedButton.styleFrom(
                                             side: const BorderSide(
-                                              color: Color(0xFFFFA500),
+                                              color: Color(0xFF7D4427),
                                               width: 2,
                                             ),
                                             shape: RoundedRectangleBorder(
@@ -312,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                           icon: const Icon(
                                             Icons.fingerprint,
-                                            color: Color(0xFFFFA500),
+                                            color: Color(0xFF7D4427),
                                             size: 24,
                                           ),
                                           label: const Text(
@@ -320,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFFFFA500),
+                                              color: Color(0xFF7D4427),
                                             ),
                                           ),
                                         ),
@@ -356,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: const Text(
                                   "Register",
                                   style: TextStyle(
-                                    color: Color(0xFFFFA500),
+                                    color: Color(0xFF7D4427),
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
