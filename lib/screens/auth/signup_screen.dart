@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-import 'signup_screen.dart';
 import '../customer/menu_screen.dart';
-import '../restaurant/dashboard_screen.dart';
+import 'login_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class RegisterScreen extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  _RegisterScreenState createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _showPassword = false;
+  bool _showConfirmPassword = false;
   bool _isLoading = false;
 
   @override
@@ -22,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/login_bg.jpg'),
+            image: AssetImage('assets/images/signup_bg.jpg'),
             fit: BoxFit.cover,
           ),
         ),
@@ -44,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 color: const Color(0xFFFFA500),
                 child: Text(
-                  "DashChop Login",
+                  "DashChop Register",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -89,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Column(
                                     children: [
                                       Text(
-                                        "Welcome Back!",
+                                        "Welcome Onboard!",
                                         style: TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,
@@ -98,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       SizedBox(height: 12),
                                       Text(
-                                        "Order your favorite meals",
+                                        "Join our community and order meals",
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: const Color(0xFF4a4a4a),
@@ -106,6 +108,34 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       ),
                                       SizedBox(height: 30),
+                                      // Full Name Field
+                                      TextField(
+                                        controller: _nameController,
+                                        style: TextStyle(
+                                          color: Color(0xFF1a1a1a),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: "Enter full name",
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey[400],
+                                          ),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF5F5F5),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 14,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(height: 16),
                                       // Email Field
                                       TextField(
                                         controller: _emailController,
@@ -177,27 +207,51 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: 12),
-                                      // Forgot Password Link
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () {},
-                                            child: const Text(
-                                              "Forgot Password?",
-                                              style: TextStyle(
-                                                color: Color(0xFFFFA500),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
+                                      SizedBox(height: 16),
+                                      // Confirm Password Field
+                                      TextField(
+                                        controller: _confirmPasswordController,
+                                        obscureText: !_showConfirmPassword,
+                                        style: TextStyle(
+                                          color: Color(0xFF1a1a1a),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: "Confirm password",
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey[400],
                                           ),
-                                        ],
+                                          filled: true,
+                                          fillColor: const Color(0xFFF5F5F5),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 14,
+                                              ),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _showConfirmPassword
+                                                  ? Icons.visibility
+                                                  : Icons.visibility_off,
+                                              color: Colors.grey,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _showConfirmPassword =
+                                                    !_showConfirmPassword;
+                                              });
+                                            },
+                                          ),
+                                        ),
                                       ),
-                                      SizedBox(height: 20),
-                                      // Login Button
+                                      SizedBox(height: 28),
+                                      // Register Button
                                       SizedBox(
                                         width: double.infinity,
                                         height: 52,
@@ -205,15 +259,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                           onPressed: _isLoading
                                               ? null
                                               : () async {
+                                                  final name = _nameController
+                                                      .text
+                                                      .trim();
                                                   final email = _emailController
                                                       .text
                                                       .trim();
                                                   final password =
                                                       _passwordController.text
                                                           .trim();
+                                                  final confirmPassword =
+                                                      _confirmPasswordController
+                                                          .text
+                                                          .trim();
 
-                                                  if (email.isEmpty ||
-                                                      password.isEmpty) {
+                                                  if (name.isEmpty ||
+                                                      email.isEmpty ||
+                                                      password.isEmpty ||
+                                                      confirmPassword.isEmpty) {
                                                     ScaffoldMessenger.of(
                                                       context,
                                                     ).showSnackBar(
@@ -226,14 +289,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     return;
                                                   }
 
+                                                  if (password !=
+                                                      confirmPassword) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Passwords do not match',
+                                                        ),
+                                                      ),
+                                                    );
+                                                    return;
+                                                  }
+
                                                   setState(
                                                     () => _isLoading = true,
                                                   );
 
                                                   try {
-                                                    // TODO: Implement login with your authentication service
+                                                    // TODO: Implement signup with your authentication service
                                                     throw Exception(
-                                                      'Login not yet implemented',
+                                                      'Signup not yet implemented',
                                                     );
                                                   } catch (e) {
                                                     setState(
@@ -245,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     ).showSnackBar(
                                                       SnackBar(
                                                         content: Text(
-                                                          'Login failed: $e',
+                                                          'Signup failed: $e',
                                                         ),
                                                       ),
                                                     );
@@ -274,55 +351,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   ),
                                                 )
                                               : const Text(
-                                                  "LOGIN",
+                                                  "REGISTER",
                                                   style: TextStyle(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.bold,
                                                     color: Colors.white,
                                                   ),
                                                 ),
-                                        ),
-                                      ),
-                                      SizedBox(height: 16),
-                                      // Fingerprint Login Button
-                                      SizedBox(
-                                        width: double.infinity,
-                                        height: 52,
-                                        child: OutlinedButton.icon(
-                                          onPressed: () {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Fingerprint login coming soon!',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                              color: Color(0xFFFFA500),
-                                              width: 2,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          icon: const Icon(
-                                            Icons.fingerprint,
-                                            color: Color(0xFFFFA500),
-                                            size: 24,
-                                          ),
-                                          label: const Text(
-                                            "Fingerprint Login",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFFFFA500),
-                                            ),
-                                          ),
                                         ),
                                       ),
                                     ],
@@ -332,12 +367,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           SizedBox(height: 24),
-                          // Sign Up Link
+                          // Login Link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Don't have an account? ",
+                                "Already have an account? ",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -349,12 +384,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => RegisterScreen(),
+                                      builder: (_) => LoginScreen(),
                                     ),
                                   );
                                 },
                                 child: const Text(
-                                  "Register",
+                                  "Login",
                                   style: TextStyle(
                                     color: Color(0xFFFFA500),
                                     fontSize: 14,
@@ -379,8 +414,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
