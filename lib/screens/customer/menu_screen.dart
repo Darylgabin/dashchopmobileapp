@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../models/dummy_data.dart';
 import '../../widgets/food_card.dart';
 
-class MenuScreen extends StatelessWidget {
+// A simple Riverpod state to hold whatever the user types in the search bar
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+class MenuScreen extends ConsumerWidget {
   final Color primaryBrown = const Color(0xFF7D4427);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Listen to the search query live
+    final searchQuery = ref.watch(searchQueryProvider).toLowerCase();
+
+    // 2. Filter the dummyMenu based on the search query
+    final filteredMenu = dummyMenu.where((food) {
+      return food.name.toLowerCase().contains(searchQuery);
+    }).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -45,7 +58,8 @@ class MenuScreen extends StatelessWidget {
                   contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 onChanged: (value) {
-                  // Logic for filtering will go here later with Riverpod
+                  // Update the Riverpod state whenever the user types
+                  ref.read(searchQueryProvider.notifier).state = value;
                 },
               ),
             ),
@@ -53,17 +67,27 @@ class MenuScreen extends StatelessWidget {
 
           // 🍽️ Piled Plates List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: dummyMenu.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 15),
-                  child: FoodCard(food: dummyMenu[index]),
-                );
-              },
-            ),
+            child: filteredMenu.isEmpty
+                ? Center(
+                    child: Text(
+                      "No items found for '$searchQuery'",
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: filteredMenu.length, // Use the filtered list!
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: FoodCard(food: filteredMenu[index]),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

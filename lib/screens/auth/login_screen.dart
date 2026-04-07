@@ -4,6 +4,8 @@ import 'signup_screen.dart';
 import '../customer/main_customer_nav.dart';
 import '../customer/menu_screen.dart';
 import '../restaurant/dashboard_screen.dart';
+import 'package:local_auth/local_auth.dart';
+
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -15,6 +17,50 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _showPassword = false;
   bool _isLoading = false;
+  final LocalAuthentication _localAuth = LocalAuthentication();
+
+  Future<void> _authenticateWithFingerprint() async {
+    try {
+      // Check if the device has hardware support
+      final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
+
+      if (!canAuthenticate) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometrics not supported on this device.')),
+          );
+        }
+        return;
+      }
+
+      // Trigger the OS fingerprint popup
+      final bool didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Tap your finger to log into DashChop',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true, // Keeps it open if the app goes to background
+        ),
+      );
+
+      // If success, log them in as a Customer!
+      if (didAuthenticate && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fingerprint Recognized! 🚀')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainCustomerNav()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Auth Error: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -305,17 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         width: double.infinity,
                                         height: 52,
                                         child: OutlinedButton.icon(
-                                          onPressed: () {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Fingerprint login coming soon!',
-                                                ),
-                                              ),
-                                            );
-                                          },
+                                          onPressed: _authenticateWithFingerprint,
                                           style: OutlinedButton.styleFrom(
                                             side: const BorderSide(
                                               color: Color(0xFF7D4427),

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dummy_data.dart';
+import '../providers/cart_provider.dart'; // Added the provider import
 
-class FoodCard extends StatelessWidget {
+class FoodCard extends ConsumerWidget {
   final FoodItem food;
   final Color primaryBrown = const Color(0xFF7D4427);
 
   const FoodCard({Key? key, required this.food}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -21,7 +23,7 @@ class FoodCard extends StatelessWidget {
           ),
         ],
       ),
-      child: IntrinsicHeight( // Allows the card to expand if text is huge
+      child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -68,8 +70,15 @@ class FoodCard extends StatelessWidget {
                         ),
                         GestureDetector(
                           onTap: () {
+                            // THIS ADDS THE ITEM TO THE RIVERPOD STATE
+                            ref.read(cartProvider.notifier).addItem(food);
+
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("${food.name} added!")),
+                              SnackBar(
+                                content: Text("${food.name} added!"),
+                                backgroundColor: primaryBrown,
+                                duration: const Duration(seconds: 1),
+                              ),
                             );
                           },
                           child: Container(

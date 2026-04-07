@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import '../../models/dummy_data.dart'; // To get our fake cakes and pies
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/cart_provider.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends ConsumerWidget {
   final Color primaryBrown = const Color(0xFF7D4427);
 
-  // We are grabbing a couple of fake items from your dummy data for the UI
-  final List<FoodItem> cartItems = [
-    dummyMenu[0], // Plain Cake (3500 F)
-    dummyMenu[6], // Meat Pie (200 F)
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    // Dummy math for the UI
-    int subtotal = cartItems.fold(0, (sum, item) => sum + item.price);
-    int deliveryFee = 500; // Standard Yaoundé delivery fee placeholder
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Listen to the Cart live
+    final cartItems = ref.watch(cartProvider);
+    final cartNotifier = ref.read(cartProvider.notifier);
+
+    // 2. Dynamic Math (Updated Base Delivery to 1000 FCFA)
+    int subtotal = cartNotifier.subtotal;
+    int deliveryFee = cartItems.isEmpty ? 0 : 1000; 
     int total = subtotal + deliveryFee;
 
     return Scaffold(
@@ -37,14 +36,21 @@ class CartScreen extends StatelessWidget {
         children: [
           // 1. The List of Items
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              itemCount: cartItems.length,
-              itemBuilder: (context, index) {
-                final item = cartItems[index];
-                return _buildCartItem(item);
-              },
-            ),
+            child: cartItems.isEmpty
+                ? Center(
+                    child: Text(
+                      "Your cart is empty. Go add some cakes!",
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    itemCount: cartItems.length,
+                    itemBuilder: (context, index) {
+                      final item = cartItems[index];
+                      return _buildCartItem(item, ref);
+                    },
+                  ),
           ),
 
           // 2. The Checkout Bottom Sheet
@@ -104,15 +110,18 @@ class CartScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Add Supabase Order logic here later
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Order Placed Successfully!'),
-                            backgroundColor: primaryBrown,
-                          ),
-                        );
-                      },
+                      onPressed: cartItems.isEmpty
+                          ? null // Disable button if cart is empty
+                          : () {
+                              // Simulate order placement
+                              ref.read(cartProvider.notifier).clearCart();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Order Placed Successfully!'),
+                                  backgroundColor: primaryBrown,
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBrown,
                         shape: RoundedRectangleBorder(
@@ -140,7 +149,7 @@ class CartScreen extends StatelessWidget {
   }
 
   // Helper Widget for individual Cart Items
-  Widget _buildCartItem(FoodItem item) {
+  Widget _buildCartItem(CartItem item, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
@@ -175,19 +184,19 @@ class CartScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.name,
+                  item.food.name,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "${item.price} F",
+                  "${item.food.price} F",
                   style: TextStyle(color: primaryBrown, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
           
-          // Quantity Selector (Static for now)
+          // Live Quantity Selector
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFFF5F5F5),
@@ -197,13 +206,17 @@ class CartScreen extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(CupertinoIcons.minus, size: 16),
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(cartProvider.notifier).removeSingleItem(item.food);
+                  },
                 ),
-                const Text("1", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("${item.quantity}", style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(CupertinoIcons.plus, size: 16),
                   color: primaryBrown,
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(cartProvider.notifier).addItem(item.food);
+                  },
                 ),
               ],
             ),
