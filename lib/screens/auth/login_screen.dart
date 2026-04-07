@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'signup_screen.dart';
 import '../customer/main_customer_nav.dart';
 import '../customer/menu_screen.dart';
-
+import '../restaurant/dashboard_screen.dart';
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -232,32 +232,37 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     () => _isLoading = true,
                                                   );
 
-                                                  try {
-                                                    // TODO: Implement login with your authentication service
-                                                    // For now, navigate to MainCustomerNav on success
-                                                    await Future.delayed(
-                                                      Duration(seconds: 1),
-                                                    );
+                                                  // Simulate a tiny delay for realism
+                                                  await Future.delayed(
+                                                    const Duration(seconds: 1),
+                                                  );
 
+                                                  setState(
+                                                    () => _isLoading = false,
+                                                  );
+
+                                                  final email = _emailController
+                                                      .text
+                                                      .trim()
+                                                      .toLowerCase();
+
+                                                  if (email ==
+                                                      "admin@dashchop.com") {
+                                                    // 🍽️ GO TO RESTAURANT
+                                                    Navigator.pushReplacement(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            DashboardScreen(),
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    // 👤 GO TO CUSTOMER
                                                     Navigator.pushReplacement(
                                                       context,
                                                       MaterialPageRoute(
                                                         builder: (_) =>
                                                             MainCustomerNav(),
-                                                      ),
-                                                    );
-                                                  } catch (e) {
-                                                    setState(
-                                                      () => _isLoading = false,
-                                                    );
-
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Login failed: $e',
-                                                        ),
                                                       ),
                                                     );
                                                   }
