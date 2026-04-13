@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../customer/main_customer_nav.dart';
 import 'login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -11,7 +12,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _showPassword = false;
@@ -145,9 +146,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         ),
                                       ),
                                       SizedBox(height: 16),
-                                      // Email Field
+                                      // Phone Number / Email Field
                                       TextFormField(
-                                        controller: _emailController,
+                                        controller: _phoneController,
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         style: TextStyle(
@@ -156,15 +157,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         ),
                                         validator: (value) {
                                           if (value == null || value.isEmpty) {
-                                            return 'Please enter your email';
-                                          }
-                                          if (!value.contains('@')) {
-                                            return 'Please enter a valid email';
+                                            return 'Please enter your phone number or email';
                                           }
                                           return null;
                                         },
                                         decoration: InputDecoration(
-                                          hintText: "Enter your email",
+                                          hintText:
+                                              "Enter phone number (e.g., 671234567) or email",
                                           hintStyle: TextStyle(
                                             color: Colors.grey[400],
                                           ),
@@ -293,11 +292,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         width: double.infinity,
                                         height: 52,
                                         child: ElevatedButton(
+                                          // Inside your Register Button:
                                           onPressed: _isLoading
                                               ? null
                                               : () async {
                                                   if (!_formKey.currentState!
-                                                      .validate()) {
+                                                      .validate())
+                                                    return;
+
+                                                  if (_passwordController
+                                                          .text !=
+                                                      _confirmPasswordController
+                                                          .text) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Passwords do not match',
+                                                        ),
+                                                      ),
+                                                    );
                                                     return;
                                                   }
 
@@ -305,34 +320,92 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                     () => _isLoading = true,
                                                   );
 
+                                                  final name = _nameController
+                                                      .text
+                                                      .trim();
+                                                  final inputText =
+                                                      _phoneController.text
+                                                          .trim();
+                                                  final password =
+                                                      _passwordController.text
+                                                          .trim();
+
+                                                  // 💡 THE SMART TRICK: Check if they typed an '@' symbol
+                                                  final email =
+                                                      inputText.contains('@')
+                                                      ? inputText // If it has an @, leave it alone (e.g., test@example.com)
+                                                      : "$inputText@dashchop.com"; // If it doesn't, it's a phone number. Add the fake suffix!
+
                                                   try {
-                                                    // TODO: Implement signup with your authentication service
-                                                    // For now, navigate to MainCustomerNav on success
-                                                    await Future.delayed(
-                                                      Duration(seconds: 1),
-                                                    );
+                                                    final supabase = Supabase
+                                                        .instance
+                                                        .client;
 
-                                                    Navigator.pushReplacement(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            MainCustomerNav(),
-                                                      ),
-                                                    );
+                                                    // 1. Create the user securely in Supabase Auth
+                                                    final authResponse =
+                                                        await supabase.auth
+                                                            .signUp(
+                                                              email: email,
+                                                              password:
+                                                                  password,
+                                                            );
+
+                                                    if (authResponse.user !=
+                                                        null) {
+                                                      // 2. Insert their profile into our public 'users' table
+                                                      await supabase
+                                                          .from('users')
+                                                          .insert({
+                                                            'id': authResponse
+                                                                .user!
+                                                                .id,
+                                                            'name': name,
+                                                            'email': email,
+                                                            'role': 'customer',
+                                                          });
+
+                                                      if (mounted) {
+                                                        setState(
+                                                          () => _isLoading =
+                                                              false,
+                                                        );
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'Account Created Successfully',
+                                                            ),
+                                                          ),
+                                                        );
+
+                                                        // 3. Send them directly into the app!
+                                                        Navigator.pushAndRemoveUntil(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                MainCustomerNav(),
+                                                          ),
+                                                          (route) => false,
+                                                        );
+                                                      }
+                                                    }
                                                   } catch (e) {
-                                                    setState(
-                                                      () => _isLoading = false,
-                                                    );
-
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Signup failed: $e',
+                                                    if (mounted) {
+                                                      setState(
+                                                        () =>
+                                                            _isLoading = false,
+                                                      );
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Signup Error: $e',
+                                                          ),
                                                         ),
-                                                      ),
-                                                    );
+                                                      );
+                                                    }
                                                   }
                                                 },
                                           style: ElevatedButton.styleFrom(
@@ -422,7 +495,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();

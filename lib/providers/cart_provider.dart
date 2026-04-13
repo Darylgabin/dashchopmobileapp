@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/dummy_data.dart';
+import '../models/food_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 1. We create a small model to track Food + Quantity
 class CartItem {
@@ -52,6 +53,48 @@ class CartNotifier extends Notifier<List<CartItem>> {
   // Clears the whole cart after ordering
   void clearCart() {
     state = [];
+  }
+
+  // --- ADD THIS INSIDE CartNotifier ---
+  Future<bool> checkout(String address) async {
+    if (state.isEmpty || address.isEmpty) return false;
+    
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser!.id;
+      // We use the Admin UUID you generated to link the order to the restaurant
+      final restaurantId = 'bca3a1ee-2a21-4994-ae19-531b8de91d32'; 
+      
+      final total = subtotal + 1000; // Subtotal + Delivery Fee
+
+      // 1. Create the Order in the database
+      final orderResponse = await supabase.from('orders').insert({
+        'customer_id': userId,
+        'restaurant_id': restaurantId,
+        'total_price': total,
+        'delivery_address': address,
+        'status': 'confirmed'
+      }).select().single();
+
+      final orderId = orderResponse['id'];
+
+      // 2. Insert all the individual cakes/pies into order_items
+      final orderItemsData = state.map((item) => {
+        'order_id': orderId,
+        'food_item_id': item.food.id,
+        'quantity': item.quantity,
+        'price': item.food.price,
+      }).toList();
+
+      await supabase.from('order_items').insert(orderItemsData);
+
+      // 3. Clear the cart on success
+      clearCart();
+      return true;
+    } catch (e) {
+      print("Checkout Error: $e");
+      return false;
+    }
   }
 
   // Calculate subtotal dynamically

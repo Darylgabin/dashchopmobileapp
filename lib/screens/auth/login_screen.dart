@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'signup_screen.dart';
 import '../customer/main_customer_nav.dart';
-import '../customer/menu_screen.dart';
 import '../restaurant/dashboard_screen.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,7 +13,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _showPassword = false;
   bool _isLoading = false;
@@ -21,43 +21,76 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _authenticateWithFingerprint() async {
     try {
-      // Check if the device has hardware support
-      final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
-      final bool canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
+      final bool canAuthenticateWithBiometrics =
+          await _localAuth.canCheckBiometrics;
+      final bool canAuthenticate =
+          canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
 
       if (!canAuthenticate) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Biometrics not supported on this device.')),
+            const SnackBar(
+              content: Text('Biometrics not supported on this device.'),
+            ),
           );
         }
         return;
       }
 
-      // Trigger the OS fingerprint popup
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'Tap your finger to log into DashChop',
         options: const AuthenticationOptions(
           biometricOnly: true,
-          stickyAuth: true, // Keeps it open if the app goes to background
+          stickyAuth: true,
         ),
       );
 
-      // If success, log them in as a Customer!
       if (didAuthenticate && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fingerprint Recognized! 🚀')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => MainCustomerNav()),
-        );
+        // 1. Check if Supabase remembers this device's login
+        final supabase = Supabase.instance.client;
+        final user = supabase.auth.currentUser;
+
+        if (user != null) {
+          // 2. Fetch their role securely
+          final userData = await supabase
+              .from('users')
+              .select()
+              .eq('id', user.id)
+              .single();
+          final role = userData['role'];
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fingerprint Recognized')),
+          );
+
+          if (role == 'restaurant') {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => DashboardScreen()),
+              (route) => false,
+            );
+          } else {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => MainCustomerNav()),
+              (route) => false,
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please log in with your email/password for the first time.',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Auth Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Auth Error: $e')));
       }
     }
   }
@@ -66,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/login_bg.jpg'),
             fit: BoxFit.cover,
@@ -74,9 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Stack(
           children: [
-            // Dark overlay for better readability
             Container(color: Colors.black.withOpacity(0.3)),
-            // Header
             Positioned(
               top: 0,
               left: 0,
@@ -89,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   right: 20,
                 ),
                 color: const Color(0xFF7D4427),
-                child: Text(
+                child: const Text(
                   "DashChop Login",
                   style: TextStyle(
                     fontSize: 24,
@@ -99,7 +130,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            // Form Content
             Column(
               children: [
                 SizedBox(height: MediaQuery.of(context).padding.top + 60),
@@ -112,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Glassmorphism Card
                           ClipRRect(
                             borderRadius: BorderRadius.circular(25),
                             child: BackdropFilter(
@@ -134,44 +163,40 @@ class _LoginScreenState extends State<LoginScreen> {
                                   key: _formKey,
                                   child: Column(
                                     children: [
-                                      Text(
+                                      const Text(
                                         "Welcome Back!",
                                         style: TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,
-                                          color: const Color(0xFF1a1a1a),
+                                          color: Color(0xFF1a1a1a),
                                         ),
                                       ),
-                                      SizedBox(height: 12),
-                                      Text(
+                                      const SizedBox(height: 12),
+                                      const Text(
                                         "Order your favorite meals",
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: const Color(0xFF4a4a4a),
+                                          color: Color(0xFF4a4a4a),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      SizedBox(height: 30),
-                                      // Email Field
+                                      const SizedBox(height: 30),
                                       TextFormField(
-                                        controller: _emailController,
+                                        controller: _phoneController,
                                         keyboardType:
                                             TextInputType.emailAddress,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
                                         validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Please enter your email';
-                                          }
-                                          if (!value.contains('@')) {
-                                            return 'Please enter a valid email';
-                                          }
+                                          if (value == null || value.isEmpty)
+                                            return 'Please enter your phone number or email';
                                           return null;
                                         },
                                         decoration: InputDecoration(
-                                          hintText: "Enter your email",
+                                          hintText:
+                                              "Enter phone number (e.g., 671234567) or email",
                                           hintStyle: TextStyle(
                                             color: Colors.grey[400],
                                           ),
@@ -190,22 +215,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ),
                                         ),
                                       ),
-                                      SizedBox(height: 16),
-                                      // Password Field
+                                      const SizedBox(height: 16),
                                       TextFormField(
                                         controller: _passwordController,
                                         obscureText: !_showPassword,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Color(0xFF1a1a1a),
                                           fontWeight: FontWeight.w600,
                                         ),
                                         validator: (value) {
-                                          if (value == null || value.isEmpty) {
+                                          if (value == null || value.isEmpty)
                                             return 'Please enter your password';
-                                          }
-                                          if (value.length < 6) {
+                                          if (value.length < 6)
                                             return 'Password must be at least 6 characters';
-                                          }
                                           return null;
                                         },
                                         decoration: InputDecoration(
@@ -234,15 +256,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                               color: Colors.grey,
                                             ),
                                             onPressed: () {
-                                              setState(() {
-                                                _showPassword = !_showPassword;
-                                              });
+                                              setState(
+                                                () => _showPassword =
+                                                    !_showPassword,
+                                              );
                                             },
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: 12),
-                                      // Forgot Password Link
+                                      const SizedBox(height: 12),
                                       Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
@@ -260,8 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 20),
-                                      // Login Button
+                                      const SizedBox(height: 20),
                                       SizedBox(
                                         width: double.infinity,
                                         height: 52,
@@ -270,47 +291,100 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ? null
                                               : () async {
                                                   if (!_formKey.currentState!
-                                                      .validate()) {
+                                                      .validate())
                                                     return;
-                                                  }
 
                                                   setState(
                                                     () => _isLoading = true,
                                                   );
 
-                                                  // Simulate a tiny delay for realism
-                                                  await Future.delayed(
-                                                    const Duration(seconds: 1),
-                                                  );
+                                                  final inputText =
+                                                      _phoneController.text
+                                                          .trim();
+                                                  final password =
+                                                      _passwordController.text
+                                                          .trim();
 
-                                                  setState(
-                                                    () => _isLoading = false,
-                                                  );
+                                                  // 💡 THE SMART TRICK: Check if they typed an '@' symbol
+                                                  final email =
+                                                      inputText.contains('@')
+                                                      ? inputText // If it has an @, leave it alone (e.g., admin@dashchop.com)
+                                                      : "$inputText@dashchop.com"; // If it doesn't, it's a phone number. Add the fake suffix!
 
-                                                  final email = _emailController
-                                                      .text
-                                                      .trim()
-                                                      .toLowerCase();
+                                                  try {
+                                                    // REAL BACKEND LOGIN
+                                                    final supabase = Supabase
+                                                        .instance
+                                                        .client;
+                                                    final authResponse =
+                                                        await supabase.auth
+                                                            .signInWithPassword(
+                                                              email: email,
+                                                              password:
+                                                                  password,
+                                                            );
 
-                                                  if (email ==
-                                                      "admin@dashchop.com") {
-                                                    // 🍽️ GO TO RESTAURANT
-                                                    Navigator.pushReplacement(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            DashboardScreen(),
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    // 👤 GO TO CUSTOMER
-                                                    Navigator.pushReplacement(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            MainCustomerNav(),
-                                                      ),
-                                                    );
+                                                    if (authResponse.user !=
+                                                        null) {
+                                                      final userData =
+                                                          await supabase
+                                                              .from('users')
+                                                              .select()
+                                                              .eq(
+                                                                'id',
+                                                                authResponse
+                                                                    .user!
+                                                                    .id,
+                                                              )
+                                                              .single();
+
+                                                      final role =
+                                                          userData['role'];
+
+                                                      if (mounted) {
+                                                        setState(
+                                                          () => _isLoading =
+                                                              false,
+                                                        );
+
+                                                        if (role ==
+                                                            'restaurant') {
+                                                          Navigator.pushAndRemoveUntil(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  DashboardScreen(),
+                                                            ),
+                                                            (route) => false,
+                                                          );
+                                                        } else {
+                                                          Navigator.pushAndRemoveUntil(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  MainCustomerNav(),
+                                                            ),
+                                                            (route) => false,
+                                                          );
+                                                        }
+                                                      }
+                                                    }
+                                                  } catch (e) {
+                                                    if (mounted) {
+                                                      setState(
+                                                        () =>
+                                                            _isLoading = false,
+                                                      );
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Login failed: $e',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
                                                   }
                                                 },
                                           style: ElevatedButton.styleFrom(
@@ -324,7 +398,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             elevation: 0,
                                           ),
                                           child: _isLoading
-                                              ? SizedBox(
+                                              ? const SizedBox(
                                                   height: 24,
                                                   width: 24,
                                                   child: CircularProgressIndicator(
@@ -345,13 +419,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 ),
                                         ),
                                       ),
-                                      SizedBox(height: 16),
-                                      // Fingerprint Login Button
+                                      const SizedBox(height: 16),
                                       SizedBox(
                                         width: double.infinity,
                                         height: 52,
                                         child: OutlinedButton.icon(
-                                          onPressed: _authenticateWithFingerprint,
+                                          onPressed:
+                                              _authenticateWithFingerprint,
                                           style: OutlinedButton.styleFrom(
                                             side: const BorderSide(
                                               color: Color(0xFF7D4427),
@@ -383,12 +457,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(height: 24),
-                          // Sign Up Link
+                          const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
+                              const Text(
                                 "Don't have an account? ",
                                 style: TextStyle(
                                   color: Colors.white,
@@ -397,14 +470,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => RegisterScreen(),
-                                    ),
-                                  );
-                                },
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => RegisterScreen(),
+                                  ),
+                                ),
                                 child: const Text(
                                   "Register",
                                   style: TextStyle(
@@ -431,7 +502,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }

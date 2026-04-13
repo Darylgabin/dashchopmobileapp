@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/dummy_data.dart';
+import '../models/food_model.dart';
 import '../providers/cart_provider.dart'; // Added the provider import
 
 class FoodCard extends ConsumerWidget {

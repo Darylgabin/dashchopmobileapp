@@ -1,28 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart'; // Add: flutter pub add intl
+import '../../providers/order_provider.dart';
 
-class OrderHistoryScreen extends StatelessWidget {
+class OrderHistoryScreen extends ConsumerWidget {
   final Color primaryBrown = const Color(0xFF7D4427);
 
-  // Mock data for UI purposes
-  final List<Map<String, dynamic>> pastOrders = [
-    {
-      "id": "#ORD-8943",
-      "date": "12 April 2026, 14:30",
-      "items": "Mega Meat Pie, Plain Cake",
-      "total": "14000 F",
-      "status": "Delivered",
-    },
-    {
-      "id": "#ORD-8910",
-      "date": "10 April 2026, 09:15",
-      "items": "Yoghurt Cake, Natural Pancake (x2)",
-      "total": "5700 F",
-      "status": "Delivered",
-    },
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(historyProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -38,25 +25,41 @@ class OrderHistoryScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: pastOrders.isEmpty
-          ? Center(
+      body: historyAsync.when(
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: primaryBrown)),
+        error: (err, stack) => Center(child: Text("Error: $err")),
+        data: (orders) {
+          if (orders.isEmpty) {
+            return Center(
               child: Text(
                 "No past orders yet.",
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
               ),
-            )
-          : ListView.builder(
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(historyProvider.future),
+            child: ListView.builder(
               padding: const EdgeInsets.all(20),
-              itemCount: pastOrders.length,
+              itemCount: orders.length,
               itemBuilder: (context, index) {
-                final order = pastOrders[index];
+                final order = orders[index];
                 return _buildOrderCard(order);
               },
             ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
+    // Format the date from Supabase
+    DateTime createdAt = DateTime.parse(order['created_at']);
+    String formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(createdAt);
+    String shortId = "#ORD-${order['order_number'].toString().padLeft(4, '0')}";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -74,68 +77,67 @@ class OrderHistoryScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Order ID and Status Pill
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                order["id"],
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  "Delivered",
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                shortId,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
+              _buildStatusPill(order['status']),
             ],
           ),
           const SizedBox(height: 12),
-          
-          // Date
           Row(
             children: [
               Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
               const SizedBox(width: 6),
               Text(
-                order["date"],
+                formattedDate,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1),
-          ),
-          
-          // Items
+          const Divider(height: 24),
           Text(
-            order["items"],
+            "Address: ${order['delivery_address']}",
             style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
           ),
           const SizedBox(height: 12),
-          
-          // Bottom Row: Total and Details Button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Total: ${order["total"]}",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: primaryBrown,
-                ),
-              ),
-          
-            ],
+          Text(
+            "Total: ${order['total_price']} F",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: primaryBrown,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String status) {
+    Color color = Colors.orange;
+    if (status == 'delivered') color = Colors.green;
+    if (status == 'on_the_way') color = Colors.blue;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
       ),
     );
   }

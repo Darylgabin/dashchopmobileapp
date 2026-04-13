@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'menu_screen.dart';
-// We will create these two later, using placeholders for now:
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
+import 'profile_screen.dart'; // 👈 Added the new Profile import
 
 class MainCustomerNav extends StatefulWidget {
+  const MainCustomerNav({Key? key}) : super(key: key);
+
   @override
   _MainCustomerNavState createState() => _MainCustomerNavState();
 }
@@ -14,10 +16,12 @@ class _MainCustomerNavState extends State<MainCustomerNav> {
   int _currentIndex = 0;
   final Color primaryBrown = const Color(0xFF7D4427);
 
+  // 👈 Removed the Center() wrappers and added ProfileScreen
   final List<Widget> _screens = [
     MenuScreen(),
-    Center(child: CartScreen()), 
-    Center(child: OrderHistoryScreen()), // Placeholder
+    CartScreen(),
+    OrderHistoryScreen(),
+    ProfileScreen(), 
   ];
 
   @override
@@ -65,6 +69,12 @@ class _MainCustomerNavState extends State<MainCustomerNav> {
                 icon: Icon(CupertinoIcons.clock),
                 activeIcon: Icon(CupertinoIcons.clock_fill),
                 label: 'History',
+              ),
+              // 👈 Added the 4th Tab for the Profile
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.person),
+                activeIcon: Icon(CupertinoIcons.person_solid),
+                label: 'Profile',
               ),
             ],
           ),
