@@ -1,106 +1,246 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:async';
 
-class TrackingScreen extends StatelessWidget {
-  final String orderId;
+class TrackingScreen extends StatefulWidget {
+  final String realOrderId;
+  final String shortOrderId;
+
+  const TrackingScreen({
+    required this.realOrderId,
+    required this.shortOrderId,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _TrackingScreenState createState() => _TrackingScreenState();
+}
+
+class _TrackingScreenState extends State<TrackingScreen> {
   final Color primaryBrown = const Color(0xFF7D4427);
+  final supabase = Supabase.instance.client;
+  Map<String, dynamic>? _orderData;
 
-  const TrackingScreen({super.key, this.orderId = "#ORD-9921"});
+  // Yaoundé Coordinates
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(3.8480, 11.5021),
+    zoom: 14.4746,
+  );
+
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToOrder();
+  }
+
+  void _subscribeToOrder() {
+    supabase
+        .from('orders')
+        .stream(primaryKey: ['id'])
+        .eq('id', widget.realOrderId)
+        .listen((List<Map<String, dynamic>> data) {
+          if (data.isNotEmpty && mounted) {
+            setState(() => _orderData = data.first);
+          }
+        });
+  }
+
+  // 💡 THE POPUP LOGIC
+  void _showStatusBottomSheet(BuildContext context, String status) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(30),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Wraps tightly around the content
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Small drag handle at the top
+              Center(
+                child: Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const Text(
+                "Delivery Status",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 25),
+              _buildTrackStep(
+                icon: CupertinoIcons.checkmark_circle_fill,
+                title: "Order Confirmed",
+                isDone: true,
+              ),
+              _buildTrackStep(
+                icon: CupertinoIcons.cube_box_fill,
+                title: "On the Way",
+                isDone: status == 'on_the_way' || status == 'delivered',
+                isActive: status == 'on_the_way',
+              ),
+              _buildTrackStep(
+                icon: CupertinoIcons.house_fill,
+                title: "Delivered",
+                isLast: true,
+                isDone: status == 'delivered',
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_orderData == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: primaryBrown)),
+      );
+    }
+
+    final String status = _orderData!['status'] ?? 'confirmed';
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar:
+          true, // 👈 Allows the map to flow behind the AppBar!
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        title: Text("Track ${widget.shortOrderId}"),
+        backgroundColor: Colors.white.withOpacity(0.9), // Slightly see-through
+        foregroundColor: primaryBrown,
         elevation: 0,
-        leading: CircleAvatar(
-          backgroundColor: Colors.white,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+        centerTitle: true,
       ),
       body: Stack(
+        // 👈 Stack puts the map on the bottom layer
         children: [
-          // 1. MAP PLACEHOLDER (Will be Google Maps later)
-          Container(
-            color: Colors.grey.shade300,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(CupertinoIcons.map_pin_ellipse, size: 100, color: primaryBrown.withOpacity(0.4)),
-                  const Text("Live Map Tracking UI Placeholder", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
+          // 🗺️ FULL SCREEN MAP
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: _initialPosition,
+            myLocationEnabled: true,
+            zoomControlsEnabled: false,
+            onMapCreated: (GoogleMapController controller) {
+              _controller.complete(controller);
+            },
           ),
 
-          // 2. TRACKING INFO CARD
+          // STATUS PILL
           Positioned(
-            bottom: 30,
+            top: 110, // Pushed down to clear the AppBar
+            right: 20,
+            child: _buildStatusPill(status),
+          ),
+
+          // 👆 FLOATING POPUP BUTTON
+          Positioned(
+            bottom: 40,
             left: 20,
             right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 5)),
-                ],
+            child: ElevatedButton(
+              onPressed: () => _showStatusBottomSheet(context, status),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBrown,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 10,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Status Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Order $orderId", style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                          const Text("On the way!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: primaryBrown.withOpacity(0.1), shape: BoxShape.circle),
-                        child: Icon(Icons.moped, color: primaryBrown),
-                      )
-                    ],
-                  ),
-                  const Divider(height: 30),
-                  
-                  // Delivery Personnel Info
-                  Row(
-                    children: [
-                      const CircleAvatar(radius: 25, backgroundColor: Color(0xFFF5F5F5), child: Icon(Icons.person, color: Colors.grey)),
-                      const SizedBox(width: 15),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("DashChop Delivery", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text("ETA: 15 - 20 mins", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {}, 
-                        icon: const Icon(Icons.call, color: Colors.green),
-                        style: IconButton.styleFrom(backgroundColor: Colors.green.withOpacity(0.1)),
-                      ),
-                    ],
-                  ),
-                ],
+              child: const Text(
+                "View Delivery Status",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTrackStep({
+    required IconData icon,
+    required String title,
+    bool isLast = false,
+    bool isDone = false,
+    bool isActive = false,
+  }) {
+    return Row(
+      children: [
+        Column(
+          children: [
+            Icon(
+              icon,
+              color: isDone
+                  ? Colors.green
+                  : (isActive ? primaryBrown : Colors.grey.shade300),
+              size: 28,
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 30,
+                color: isDone ? Colors.green : Colors.grey.shade200,
+              ),
+          ],
+        ),
+        const SizedBox(width: 20),
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: isDone || isActive
+                ? FontWeight.bold
+                : FontWeight.normal,
+            color: isDone
+                ? Colors.green
+                : (isActive ? primaryBrown : Colors.grey.shade400),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusPill(String status) {
+    Color color = Colors.orange;
+    if (status == 'delivered') color = Colors.green;
+    if (status == 'on_the_way') color = Colors.blue;
+    if (status == 'rejected') color = Colors.red;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10)],
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       ),
     );
   }

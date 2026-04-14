@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final historyProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final historyProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final supabase = Supabase.instance.client;
   final userId = supabase.auth.currentUser!.id;
 
-  final response = await supabase
+  // .stream() keeps a live connection to the database
+  return supabase
       .from('orders')
-      .select()
+      .stream(primaryKey: ['id'])
       .eq('customer_id', userId)
-      .order('created_at', ascending: false);
-
-  return List<Map<String, dynamic>>.from(response);
+      .order('created_at')
+      .map((maps) => maps.toList());
 });
