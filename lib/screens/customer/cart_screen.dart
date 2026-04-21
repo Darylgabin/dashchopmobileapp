@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/cart_provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'location_picker_screen.dart'; 
 
 class CartScreen extends ConsumerStatefulWidget {
   @override
@@ -12,6 +14,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final Color primaryBrown = const Color(0xFF7D4427);
   final TextEditingController _addressController = TextEditingController();
   bool _isProcessing = false;
+  LatLng? _selectedDeliveryLocation; 
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +22,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final cartNotifier = ref.read(cartProvider.notifier);
 
     int subtotal = cartNotifier.subtotal;
-    int deliveryFee = cartItems.isEmpty ? 0 : 1000; 
+    int deliveryFee = cartItems.isEmpty ? 0 : 1000;
     int total = subtotal + deliveryFee;
 
     return Scaffold(
@@ -38,38 +41,42 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     itemCount: cartItems.length,
-                    itemBuilder: (context, index) {
-                      return _buildCartItem(cartItems[index]);
-                    },
+                    itemBuilder: (context, index) => _buildCartItem(cartItems[index]),
                   ),
           ),
-
-          // Checkout Bottom Sheet
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
-            ),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(30)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))]),
             child: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text("Delivery Address (Yaoundé)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const Text("Location Description (Optional)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 8),
+                  // ✅ RENAMED TEXT FIELD
                   TextField(
-                    controller: _addressController, // Controller added here!
+                    controller: _addressController, 
                     decoration: InputDecoration(
-                      hintText: "e.g., Mvan, near the junction",
+                      hintText: "e.g., Blue gate, next to the bakery",
                       hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                      prefixIcon: Icon(CupertinoIcons.location_solid, color: primaryBrown),
+                      prefixIcon: Icon(CupertinoIcons.doc_text_fill, color: primaryBrown),
                       filled: true,
                       fillColor: const Color(0xFFF5F5F5),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.map_pin_ellipse, color: Colors.red),
+                    title: Text(_selectedDeliveryLocation == null ? "Set GPS Delivery Pin" : "GPS Location Saved!"),
+                    subtitle: const Text("Required: Drag the pin to your exact house"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      final selectedLatLng = await Navigator.push(context, MaterialPageRoute(builder: (_) => LocationPickerScreen()));
+                      if (selectedLatLng != null) setState(() => _selectedDeliveryLocation = selectedLatLng);
+                    },
                   ),
                   const SizedBox(height: 20),
                   _buildReceiptRow("Subtotal", "$subtotal F"),
@@ -79,38 +86,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   _buildReceiptRow("Total", "$total F", isTotal: true),
                   const SizedBox(height: 24),
 
-                  // The Checkout Button
                   SizedBox(
-                    width: double.infinity,
-                    height: 55,
+                    width: double.infinity, height: 55,
                     child: ElevatedButton(
-                      onPressed: cartItems.isEmpty || _isProcessing
-                          ? null 
-                          : () async {
-                              final address = _addressController.text.trim();
-                              if (address.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter an address!')));
-                                return;
-                              }
+                      onPressed: cartItems.isEmpty || _isProcessing ? null : () async {
+                        if (_selectedDeliveryLocation == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please set your delivery pin on the map first!")));
+                          return;
+                        }
 
-                              setState(() => _isProcessing = true);
-                              
-                              // Trigger the Riverpod Cloud function
-                              bool success = await ref.read(cartProvider.notifier).checkout(address);
-                              
-                              setState(() => _isProcessing = false);
+                        setState(() => _isProcessing = true);
+                        
+                        // We still send the description, even if it's blank
+                        final description = _addressController.text.trim();
+                        bool success = await ref.read(cartProvider.notifier).checkout(description, _selectedDeliveryLocation!.latitude, _selectedDeliveryLocation!.longitude);
+                        
+                        setState(() => _isProcessing = false);
 
-                              if (success) {
-                                _addressController.clear();
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Order Placed Successfully!'), backgroundColor: primaryBrown));
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checkout failed. Try again.')));
-                              }
-                            },
+                        if (success) {
+                          _addressController.clear();
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Order Placed Successfully!'), backgroundColor: primaryBrown));
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checkout failed. Try again.')));
+                        }
+                      },
                       style: ElevatedButton.styleFrom(backgroundColor: primaryBrown, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 0),
-                      child: _isProcessing 
-                        ? const CircularProgressIndicator(color: Colors.white) 
-                        : const Text("Place Order (Cash on Delivery)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      child: _isProcessing ? const CircularProgressIndicator(color: Colors.white) : const Text("Place Order", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   ),
                 ],
@@ -122,11 +123,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  // Helpers
   Widget _buildCartItem(CartItem item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 5))]),
       child: Row(
         children: [
@@ -135,12 +134,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.food.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), const SizedBox(height: 4), Text("${item.food.price} F", style: TextStyle(color: primaryBrown, fontWeight: FontWeight.w600))])),
           Container(
             decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(20)),
-            child: Row(children: [
-              IconButton(icon: const Icon(CupertinoIcons.minus, size: 16), onPressed: () => ref.read(cartProvider.notifier).removeSingleItem(item.food)),
-              Text("${item.quantity}", style: const TextStyle(fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(CupertinoIcons.plus, size: 16), color: primaryBrown, onPressed: () => ref.read(cartProvider.notifier).addItem(item.food)),
-            ]),
-          )
+            child: Row(
+              children: [
+                IconButton(icon: const Icon(CupertinoIcons.minus, size: 16), onPressed: () => ref.read(cartProvider.notifier).removeSingleItem(item.food)),
+                Text("${item.quantity}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(CupertinoIcons.plus, size: 16), color: primaryBrown, onPressed: () => ref.read(cartProvider.notifier).addItem(item.food)),
+              ],
+            ),
+          ),
         ],
       ),
     );
