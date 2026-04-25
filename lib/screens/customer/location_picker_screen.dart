@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   @override
@@ -13,8 +14,8 @@ class LocationPickerScreen extends StatefulWidget {
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
   final Color primaryBrown = const Color(0xFF7D4427);
 
-  // 🚨 IMPORTANT: Paste your actual Google Maps API Key here to make the search work!
-  final String _googleApiKey = "AIzaSyAXRWa8f_IrCmWQYWGRBisln6u48KpEul4";
+  // � Replace the old hardcoded key with this!
+  final String _googleApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   LatLng _cameraCenter = const LatLng(3.8480, 11.5021); // Yaoundé
   bool _isMoving = false;
@@ -129,7 +130,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: "Search landmark (e.g., Mvan)",
+                    hintText: "Search your location...",
                     border: InputBorder.none,
                     icon: Icon(Icons.search, color: primaryBrown),
                   ),

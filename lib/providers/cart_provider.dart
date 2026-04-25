@@ -59,6 +59,7 @@ class CartNotifier extends Notifier<List<CartItem>> {
     String address,
     double latitude,
     double longitude,
+    int deliveryFee, // 👈 NEW: Accepts the dynamic fee from the Cart Screen
   ) async {
     if (state.isEmpty || address.isEmpty) return false;
 
@@ -68,7 +69,8 @@ class CartNotifier extends Notifier<List<CartItem>> {
       // We use the Admin UUID you generated to link the order to the restaurant
       final restaurantId = 'bca3a1ee-2a21-4994-ae19-531b8de91d32';
 
-      final total = subtotal + 1000; // Subtotal + Delivery Fee
+      // 💡 NEW: Calculates total using the dynamic fee!
+      final total = subtotal + deliveryFee;
 
       // 1. Create the Order in the database
       final orderResponse = await supabase

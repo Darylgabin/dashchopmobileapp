@@ -27,16 +27,40 @@ class FoodCard extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Left: Image Placeholder
+            // Left: Food Image
             Container(
               width: 100,
               decoration: BoxDecoration(
-                color: primaryBrown.withOpacity(0.1),
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(20),
+                ),
               ),
-              child: Icon(Icons.cake, color: primaryBrown, size: 40),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(20),
+                ),
+                child:
+                    food.imageUrl.isNotEmpty &&
+                        food.imageUrl != 'assets/images/placeholder.png'
+                    ? Image.network(
+                        food.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: primaryBrown.withOpacity(0.1),
+                          child: Icon(
+                            Icons.cake,
+                            color: primaryBrown,
+                            size: 40,
+                          ),
+                        ),
+                      )
+                    : Container(
+                        color: primaryBrown.withOpacity(0.1),
+                        child: Icon(Icons.cake, color: primaryBrown, size: 40),
+                      ),
+              ),
             ),
-            
+
             // Right: Content
             Expanded(
               child: Padding(
@@ -54,7 +78,10 @@ class FoodCard extends ConsumerWidget {
                     const SizedBox(height: 5),
                     Text(
                       food.category,
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -87,7 +114,11 @@ class FoodCard extends ConsumerWidget {
                               color: primaryBrown,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.add, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],

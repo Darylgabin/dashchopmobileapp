@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // 👈 NEW
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DeliveryScreen extends StatefulWidget {
   final String realOrderId;
@@ -23,14 +24,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   final Color primaryBrown = const Color(0xFF7D4427);
   final supabase = Supabase.instance.client;
 
-  // 🚨 PASTE YOUR API KEY HERE
-  final String googleApiKey = "AIzaSyAXRWa8f_IrCmWQYWGRBisln6u48KpEul4";
+  final String googleApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
   Set<Marker> _markers = {};
 
-  // 🛣️ Polyline variables
   Set<Polyline> _polylines = {};
   List<LatLng> polylineCoordinates = [];
   late PolylinePoints polylinePoints;
@@ -39,7 +38,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   LatLng? adminLocation;
 
   StreamSubscription<Position>? _positionStream;
-  bool _shareLocation = true;
   bool _isLoading = true;
 
   @override
@@ -95,28 +93,35 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         });
   }
 
-  void _updateAdminLocation(Position position) {
+  void _updateAdminLocation(Position position) async {
     setState(() {
       adminLocation = LatLng(position.latitude, position.longitude);
       _setMapPins();
     });
 
-    // Get the blue line route whenever the admin moves
     _getPolyline();
 
-    if (_shareLocation) {
-      supabase
+    // 📡 ALWAYS BROADCAST TO SUPABASE (With Error Catching!)
+    try {
+      await supabase
           .from('orders')
           .update({
             'admin_lat': position.latitude,
             'admin_lng': position.longitude,
           })
           .eq('id', widget.realOrderId);
+
+      print(
+        "✅ GPS Broadcasted Successfully: ${position.latitude}, ${position.longitude}",
+      );
+    } catch (error) {
+      print(
+        "🚨 GPS BROADCAST FAILED: $error",
+      ); // 👈 This will scream if RLS blocks it!
     }
   }
 
-  // 💡 THE BLUE LINE LOGIC
-  void _getPolyline() async {
+  Future<void> _getPolyline() async {
     if (adminLocation == null || customerLocation == null) return;
 
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
@@ -135,18 +140,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       for (var point in result.points) {
         polylineCoordinates.add(LatLng(point.latitude, point.longitude));
       }
-    }
 
-    setState(() {
-      _polylines.add(
-        Polyline(
-          polylineId: const PolylineId("route"),
-          color: Colors.blue, // 👈 THE BLUE LINE
-          points: polylineCoordinates,
-          width: 5,
-        ),
-      );
-    });
+      setState(() {
+        _polylines = {
+          Polyline(
+            polylineId: const PolylineId("route"),
+            color: Colors.blue,
+            points: polylineCoordinates,
+            width: 5,
+          ),
+        };
+      });
+    }
   }
 
   void _setMapPins() {
@@ -173,6 +178,33 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ),
       );
     }
+    _fitMapToMarkers();
+  }
+
+  Future<void> _fitMapToMarkers() async {
+    if (customerLocation == null || adminLocation == null) return;
+    final GoogleMapController controller = await _controller.future;
+
+    LatLngBounds bounds = LatLngBounds(
+      southwest: LatLng(
+        adminLocation!.latitude < customerLocation!.latitude
+            ? adminLocation!.latitude
+            : customerLocation!.latitude,
+        adminLocation!.longitude < customerLocation!.longitude
+            ? adminLocation!.longitude
+            : customerLocation!.longitude,
+      ),
+      northeast: LatLng(
+        adminLocation!.latitude > customerLocation!.latitude
+            ? adminLocation!.latitude
+            : customerLocation!.latitude,
+        adminLocation!.longitude > customerLocation!.longitude
+            ? adminLocation!.longitude
+            : customerLocation!.longitude,
+      ),
+    );
+
+    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
   }
 
   Future<void> _markAsDelivered() async {
@@ -201,12 +233,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                     zoom: 14,
                   ),
                   markers: _markers,
-                  polylines: _polylines, // 👈 ADDED THIS
+                  polylines: _polylines,
                   myLocationEnabled: true,
                   onMapCreated: (GoogleMapController controller) =>
                       _controller.complete(controller),
                 ),
-                // Action panel remains the same...
+
+                // 📋 CLEANED UP ACTION PANEL (Only the button remains!)
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -216,43 +249,34 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(30),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "Share My Location",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Switch(
-                              value: _shareLocation,
-                              activeColor: primaryBrown,
-                              onChanged: (val) =>
-                                  setState(() => _shareLocation = val),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _markAsDelivered,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                            ),
-                            child: const Text(
-                              "MARK AS DELIVERED",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, -5),
                         ),
                       ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _markAsDelivered,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        child: const Text(
+                          "MARK AS DELIVERED",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

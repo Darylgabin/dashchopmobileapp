@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 import '../../providers/order_provider.dart';
 import 'tracking_screen.dart';
 
@@ -20,11 +20,16 @@ class OrderHistoryScreen extends ConsumerWidget {
         centerTitle: true,
         title: const Text(
           "Order History",
-          style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1A1A1A),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: historyAsync.when(
-        loading: () => Center(child: CircularProgressIndicator(color: primaryBrown)),
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: primaryBrown)),
         error: (err, stack) => Center(child: Text("Error: $err")),
         data: (orders) {
           if (orders.isEmpty) {
@@ -41,7 +46,7 @@ class OrderHistoryScreen extends ConsumerWidget {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              return _buildOrderCard(context, order); 
+              return _buildOrderCard(context, order);
             },
           );
         },
@@ -52,9 +57,10 @@ class OrderHistoryScreen extends ConsumerWidget {
   Widget _buildOrderCard(BuildContext context, Map<String, dynamic> order) {
     DateTime createdAt = DateTime.parse(order['created_at']);
     String formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(createdAt);
-    
+
     // We keep the sequential ID logic hidden or for navigation purposes
-    String shortId = "ORDER ${order['order_number']?.toString().padLeft(3, '0') ?? '---'}";
+    String shortId =
+        "ORDER ${order['order_number']?.toString().padLeft(3, '0') ?? '---'}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -62,7 +68,13 @@ class OrderHistoryScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +85,11 @@ class OrderHistoryScreen extends ConsumerWidget {
               // ✅ HEADER: Price is now the main focus
               Text(
                 "${order['total_price']} F",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: primaryBrown),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: primaryBrown,
+                ),
               ),
               _buildStatusPill(order['status'] ?? 'confirmed'),
             ],
@@ -83,15 +99,18 @@ class OrderHistoryScreen extends ConsumerWidget {
             children: [
               Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
               const SizedBox(width: 6),
-              Text(formattedDate, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              Text(
+                formattedDate,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
             ],
           ),
           const Divider(height: 24),
           Text(
-            "📍 Address: ${order['delivery_address']}",
+            "📍 Location Description: ${order['delivery_address']}",
             style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
           ),
-          
+
           if (order['status'] != 'rejected' && order['status'] != 'delivered')
             Padding(
               padding: const EdgeInsets.only(top: 10),
@@ -111,9 +130,17 @@ class OrderHistoryScreen extends ConsumerWidget {
                   },
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: primaryBrown),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: Text("Track Live Delivery", style: TextStyle(color: primaryBrown, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    "Track Live Delivery",
+                    style: TextStyle(
+                      color: primaryBrown,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -130,8 +157,18 @@ class OrderHistoryScreen extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-      child: Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
     );
   }
 }

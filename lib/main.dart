@@ -4,15 +4,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/customer/main_customer_nav.dart';
 import 'screens/restaurant/dashboard_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
- //supabase initialization with our project URL and anon key (from supabase dashboard)
+  await dotenv.load(fileName: ".env");
+
+ //supabase initialization 
   await Supabase.initialize(
-    url: 'https://ncdydycfsjkqrbhjgacg.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jZHlkeWNmc2prcXJiaGpnYWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTI1NjUsImV4cCI6MjA5MTA4ODU2NX0.5TDP4sOyar5FovPteZuCF12KdjC76aNL8oHxAToS_Vw',
+    url:  'SUPABASE_URL' ,
+    anonKey: 'SUPABASE_ANON_KEY',
+       
   );
   
   runApp(const ProviderScope(child: DashChopApp()));

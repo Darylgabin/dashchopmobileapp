@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart'; 
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TrackingScreen extends StatefulWidget {
   final String realOrderId;
@@ -23,10 +24,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
   final Color primaryBrown = const Color(0xFF7D4427);
   final supabase = Supabase.instance.client;
 
-  final String googleApiKey = "AIzaSyAXRWa8f_IrCmWQYWGRBisln6u48KpEul4";
+  final String googleApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   Map<String, dynamic>? _orderData;
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
   Set<Marker> _markers = {};
 
   Set<Polyline> _polylines = {};
@@ -40,7 +42,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   void initState() {
     super.initState();
     // 💡 FIX 1: API Key goes here!
-    polylinePoints = PolylinePoints(apiKey: googleApiKey); 
+    polylinePoints = PolylinePoints(apiKey: googleApiKey);
     _subscribeToOrder();
   }
 
@@ -69,7 +71,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
               }
 
               _setMapPins();
-              _getPolyline(); 
+              _getPolyline();
             });
           }
         });
@@ -82,7 +84,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
       request: PolylineRequest(
         origin: PointLatLng(adminLocation!.latitude, adminLocation!.longitude),
-        destination: PointLatLng(customerLocation!.latitude, customerLocation!.longitude),
+        destination: PointLatLng(
+          customerLocation!.latitude,
+          customerLocation!.longitude,
+        ),
         mode: TravelMode.driving,
       ),
     );
@@ -100,7 +105,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
             color: Colors.blue,
             points: polylineCoordinates,
             width: 5,
-          )
+          ),
         };
       });
     }
@@ -113,7 +118,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
         Marker(
           markerId: const MarkerId('admin'),
           position: adminLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange,
+          ),
           infoWindow: const InfoWindow(title: 'Driver Location'),
         ),
       );
@@ -123,27 +130,37 @@ class _TrackingScreenState extends State<TrackingScreen> {
         Marker(
           markerId: const MarkerId('customer'),
           position: customerLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
           infoWindow: const InfoWindow(title: 'Your House'),
         ),
       );
     }
     setState(() => _markers = newMarkers);
-    _fitMapToMarkers(); 
+    _fitMapToMarkers();
   }
 
   Future<void> _fitMapToMarkers() async {
     if (customerLocation == null || adminLocation == null) return;
     final GoogleMapController controller = await _controller.future;
-    
+
     LatLngBounds bounds = LatLngBounds(
       southwest: LatLng(
-        adminLocation!.latitude < customerLocation!.latitude ? adminLocation!.latitude : customerLocation!.latitude,
-        adminLocation!.longitude < customerLocation!.longitude ? adminLocation!.longitude : customerLocation!.longitude,
+        adminLocation!.latitude < customerLocation!.latitude
+            ? adminLocation!.latitude
+            : customerLocation!.latitude,
+        adminLocation!.longitude < customerLocation!.longitude
+            ? adminLocation!.longitude
+            : customerLocation!.longitude,
       ),
       northeast: LatLng(
-        adminLocation!.latitude > customerLocation!.latitude ? adminLocation!.latitude : customerLocation!.latitude,
-        adminLocation!.longitude > customerLocation!.longitude ? adminLocation!.longitude : customerLocation!.longitude,
+        adminLocation!.latitude > customerLocation!.latitude
+            ? adminLocation!.latitude
+            : customerLocation!.latitude,
+        adminLocation!.longitude > customerLocation!.longitude
+            ? adminLocation!.longitude
+            : customerLocation!.longitude,
       ),
     );
 
@@ -173,9 +190,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
               zoom: 14,
             ),
             markers: _markers,
-            polylines: _polylines, 
+            polylines: _polylines,
             myLocationEnabled: true,
-            onMapCreated: (GoogleMapController controller) => _controller.complete(controller),
+            onMapCreated: (GoogleMapController controller) =>
+                _controller.complete(controller),
           ),
           Positioned(top: 110, right: 20, child: _buildStatusPill(status)),
           Positioned(
@@ -185,11 +203,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
             child: ElevatedButton(
               onPressed: () => _showStatusBottomSheet(context, status),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBrown, 
-                padding: const EdgeInsets.symmetric(vertical: 16), 
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                backgroundColor: primaryBrown,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
-              child: const Text("View Delivery Status", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              child: const Text(
+                "View Delivery Status",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
         ],
@@ -203,8 +230,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
     if (status == 'on_the_way') color = Colors.blue;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10)]),
-      child: Text(status.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10)],
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 
@@ -215,17 +253,47 @@ class _TrackingScreenState extends State<TrackingScreen> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(30),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 50, height: 5, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-              const Text("Delivery Status", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Center(
+                child: Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const Text(
+                "Delivery Status",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 25),
-              _buildTrackStep(icon: CupertinoIcons.checkmark_circle_fill, title: "Order Confirmed", isDone: true),
-              _buildTrackStep(icon: CupertinoIcons.cube_box_fill, title: "On the Way", isDone: status == 'on_the_way' || status == 'delivered', isActive: status == 'on_the_way'),
-              _buildTrackStep(icon: CupertinoIcons.house_fill, title: "Delivered", isLast: true, isDone: status == 'delivered'),
+              _buildTrackStep(
+                icon: CupertinoIcons.checkmark_circle_fill,
+                title: "Order Confirmed",
+                isDone: true,
+              ),
+              _buildTrackStep(
+                icon: CupertinoIcons.cube_box_fill,
+                title: "On the Way",
+                isDone: status == 'on_the_way' || status == 'delivered',
+                isActive: status == 'on_the_way',
+              ),
+              _buildTrackStep(
+                icon: CupertinoIcons.house_fill,
+                title: "Delivered",
+                isLast: true,
+                isDone: status == 'delivered',
+              ),
             ],
           ),
         );
@@ -233,17 +301,44 @@ class _TrackingScreenState extends State<TrackingScreen> {
     );
   }
 
-  Widget _buildTrackStep({required IconData icon, required String title, bool isLast = false, bool isDone = false, bool isActive = false}) {
+  Widget _buildTrackStep({
+    required IconData icon,
+    required String title,
+    bool isLast = false,
+    bool isDone = false,
+    bool isActive = false,
+  }) {
     return Row(
       children: [
         Column(
           children: [
-            Icon(icon, color: isDone ? Colors.green : (isActive ? primaryBrown : Colors.grey.shade300), size: 28),
-            if (!isLast) Container(width: 2, height: 30, color: isDone ? Colors.green : Colors.grey.shade200),
+            Icon(
+              icon,
+              color: isDone
+                  ? Colors.green
+                  : (isActive ? primaryBrown : Colors.grey.shade300),
+              size: 28,
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 30,
+                color: isDone ? Colors.green : Colors.grey.shade200,
+              ),
           ],
         ),
         const SizedBox(width: 20),
-        Text(title, style: TextStyle(fontWeight: isDone || isActive ? FontWeight.bold : FontWeight.normal, color: isDone ? Colors.green : (isActive ? primaryBrown : Colors.grey.shade400))),
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: isDone || isActive
+                ? FontWeight.bold
+                : FontWeight.normal,
+            color: isDone
+                ? Colors.green
+                : (isActive ? primaryBrown : Colors.grey.shade400),
+          ),
+        ),
       ],
     );
   }
